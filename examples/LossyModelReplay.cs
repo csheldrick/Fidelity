@@ -28,11 +28,7 @@ var exitCode = await Fidelity.RunAsync(
         expectations.Equal("result container", "present", response =>
             response.Result is null ? "missing" : "present");
 
-        // The incomplete model has no Status or Error properties. These required
-        // semantics are therefore not observable after the typed pipeline runs.
-        expectations.Equal("result.status", "error", _ => null);
-        expectations.Equal("result.error.message", "operation_not_allowed", _ => null);
-        expectations.Equal("result.error.code", -180, _ => null);
+        RequiredSemantics.ApplicationError(expectations);
     });
 
 return exitCode;

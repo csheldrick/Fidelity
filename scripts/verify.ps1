@@ -30,9 +30,9 @@ foreach ($requiredLine in @(
     "[PASS] transport/client invocation succeeded",
     "[PASS] typed result produced",
     "[FAIL] required semantic expectation failed",
-    'result.status: expected "error", actual <null>',
-    'result.error.message: expected "operation_not_allowed", actual <null>',
-    'result.error.code: expected -180, actual <null>'
+    'result.status: expected "error", actual <unobservable>',
+    'result.error.message: expected "operation_not_allowed", actual <unobservable>',
+    'result.error.code: expected -180, actual <unobservable>'
 )) {
     if ($lossy -notmatch [regex]::Escape($requiredLine)) {
         throw "Lossy replay did not report the expected Fidelity diagnostic: $requiredLine"
@@ -54,6 +54,19 @@ foreach ($demoPath in @(
 )) {
     if ((Get-Content -LiteralPath $demoPath -Raw) -notmatch "fixtures/application-error\.json") {
         throw "$demoPath does not replay the shared application-error fixture."
+    }
+}
+
+foreach ($demoPath in @(
+    (Join-Path $repoRoot "examples/LossyModelReplay.cs"),
+    (Join-Path $repoRoot "examples/CorrectedModelReplay.cs")
+)) {
+    $demoSource = Get-Content -LiteralPath $demoPath -Raw
+    if ($demoSource -notmatch "RequiredSemantics\.ApplicationError\(expectations\)") {
+        throw "$demoPath does not reuse the shared application-error expectation definition."
+    }
+    if ($demoSource -match "_\s*=>\s*null") {
+        throw "$demoPath contains a hard-coded null semantic selector."
     }
 }
 

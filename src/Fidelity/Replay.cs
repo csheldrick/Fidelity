@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json.Serialization;
 
 public sealed class ReplayHttpMessageHandler : HttpMessageHandler
 {
@@ -111,6 +112,16 @@ public static class Fidelity
     }
 }
 
+public static class RequiredSemantics
+{
+    public static void ApplicationError<T>(SemanticExpectations<T> expectations)
+    {
+        expectations.PathEqual("result.status", "error");
+        expectations.PathEqual("result.error.message", "operation_not_allowed");
+        expectations.PathEqual("result.error.code", -180);
+    }
+}
+
 public sealed class SemanticExpectations<T>
 {
     private readonly T subject;
@@ -140,6 +151,59 @@ public sealed class SemanticExpectations<T>
             Failures.Add(
                 $"{path}: expected {Format(expected)}, actual {Format(actualValue)}");
         }
+    }
+
+    public void PathEqual(string path, object? expected)
+    {
+        var observation = ObservePath(subject, path.Split('.'));
+        if (!observation.Found)
+        {
+            Failures.Add($"{path}: expected {Format(expected)}, actual <unobservable>");
+            return;
+        }
+
+        if (!Equals(expected, observation.Value))
+        {
+            Failures.Add(
+                $"{path}: expected {Format(expected)}, actual {Format(observation.Value)}");
+        }
+    }
+
+    private static PathObservation ObservePath(object? current, IReadOnlyList<string> segments)
+    {
+#pragma warning disable IL2075 // This intentional runtime observer runs against the typed result produced by the client.
+        foreach (var segment in segments)
+        {
+            if (current is null)
+            {
+                return PathObservation.NotFound;
+            }
+
+            var property = current.GetType().GetProperties()
+                .FirstOrDefault(candidate =>
+                    string.Equals(candidate.Name, segment, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        candidate.GetCustomAttributes(typeof(JsonPropertyNameAttribute), inherit: true)
+                            .OfType<JsonPropertyNameAttribute>()
+                            .FirstOrDefault()?.Name,
+                        segment,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (property is null || !property.CanRead)
+            {
+                return PathObservation.NotFound;
+            }
+
+            current = property.GetValue(current);
+        }
+
+        return new PathObservation(true, current);
+#pragma warning restore IL2075
+    }
+
+    private readonly record struct PathObservation(bool Found, object? Value)
+    {
+        public static PathObservation NotFound => new(false, null);
     }
 
     private static string Format(object? value)

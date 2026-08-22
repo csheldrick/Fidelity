@@ -25,12 +25,7 @@ var exitCode = await Fidelity.RunAsync(
     () => client.GetOperationAsync(),
     expectations =>
     {
-        expectations.Equal("result.status", "error", response => response.Result?.Status);
-        expectations.Equal(
-            "result.error.message",
-            "operation_not_allowed",
-            response => response.Result?.Error?.Message);
-        expectations.Equal("result.error.code", -180, response => response.Result?.Error?.Code);
+        RequiredSemantics.ApplicationError(expectations);
     });
 
 return exitCode;
