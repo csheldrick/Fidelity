@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "current": {
+    "status": "active",
+    "goal": "Replay real HTTP responses through real typed API client pipelines and detect when required semantics are lost.",
+    "openQuestions": [],
+    "recordedAt": "2026-08-22",
+    "codeState": {
+      "head": "50c92429ec10739d595051a5b3c2e9aad9fc5eaa",
+      "stateHash": "d3eba304130ee9b4e0210b251edfa82d6410128265df414658b96c58e07eb0d2"
+    }
+  },
+  "history": []
+}
