@@ -87,21 +87,29 @@ If the typed client returns an object while those required semantics disappear, 
 
 ## Initial demos
 
-The repository should include small, self-contained examples that demonstrate the idea without depending on any private or work-specific API.
+The repository includes three self-contained, vendor-agnostic file-based apps using the public Refit typed-client library:
 
-1. **Pass: correctly modeled response**  
-   The raw response contains meaningful fields and the typed client preserves them.
+1. **Pass: correctly modeled response** — [`examples/HealthyReplay.cs`](examples/HealthyReplay.cs) replays [`fixtures/healthy.json`](fixtures/healthy.json), invokes a real Refit interface, and verifies meaningful fields.
+2. **Expected Fidelity failure: incomplete model** — [`examples/LossyModelReplay.cs`](examples/LossyModelReplay.cs) replays the valid application-error response, receives HTTP 200 and a typed object, then fails because the model cannot observe the required error semantics.
+3. **Pass: corrected model** — [`examples/CorrectedModelReplay.cs`](examples/CorrectedModelReplay.cs) replays the exact same fixture with a model that represents `status` and `error`.
 
-2. **Fail: missing response properties**  
-   The HTTP response is valid and deserialization succeeds, but the response model omits important fields and the serializer silently drops them.
+The expected-failure example exits with code 1 by itself. The repository check treats that exit as success only when the output proves that transport and typed-result production succeeded before the required semantic expectations failed.
 
-3. **Fail: alternate error shape**  
-   The client models a documented success shape while the API returns a valid application-error variant. The call still deserializes, but required semantics are lost.
+## Running the slice
 
-4. **Pass: corrected model**  
-   The exact same fixture from the previous failure is replayed through a response model capable of representing the alternate shape, and the semantic assertions pass.
+Run these commands from the repository root with the .NET 10 SDK:
 
-A later demo may exercise custom converters, naming policies, or other serializer/client configuration to show that Fidelity validates the whole client boundary rather than only DTO shape.
+```powershell
+dotnet run --file examples/HealthyReplay.cs
+dotnet run --file examples/LossyModelReplay.cs       # expected exit code: 1
+dotnet run --file examples/CorrectedModelReplay.cs
+pwsh -NoProfile -File scripts/verify.ps1
+noet verify run
+```
+
+The file-based apps use `#:include` for the shared replay mechanics and `#:package Refit@8.0.0` for the typed-client pipeline. No project file, fake server, host, or production-code change is required.
+
+The smallest reusable mechanics are in [`src/Fidelity/Replay.cs`](src/Fidelity/Replay.cs): `ReplayHttpMessageHandler` replaces only transport, `ReplayFixture` reads a captured body, and `Fidelity.RunAsync` reports transport/client invocation, typed-result production, and semantic expectation status. Inline JSON remains possible by passing a string directly to the handler.
 
 ## Design principles
 

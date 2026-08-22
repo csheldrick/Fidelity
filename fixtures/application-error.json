@@ -1,0 +1,9 @@
+{
+  "result": {
+    "status": "error",
+    "error": {
+      "message": "operation_not_allowed",
+      "code": -180
+    }
+  }
+}
