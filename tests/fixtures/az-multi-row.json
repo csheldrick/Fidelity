@@ -1,0 +1,16 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        { "name": "timestamp", "type": "datetime" },
+        { "name": "operation_Id", "type": "string" },
+        { "name": "responseBody", "type": "string" }
+      ],
+      "rows": [
+        [ "2026-08-20T12:00:00Z", "op-first", "{\"result\":{\"status\":\"ok\",\"message\":\"first-row\",\"count\":1}}" ],
+        [ "2026-08-20T12:05:00Z", "op-second", "{\"result\":{\"status\":\"ok\",\"message\":\"second-row\",\"count\":2}}" ]
+      ]
+    }
+  ]
+}

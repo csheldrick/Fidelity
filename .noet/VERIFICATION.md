@@ -17,6 +17,17 @@ Noet's 120-second default. Example: `- \`npm run e2e\` — timeout: 300s`
 - `examples/CorrectedModelReplay.cs`
 - `fixtures/healthy.json`
 - `fixtures/application-error.json`
+- `src/Fidelity/Harvest.cs`
+- `tools/HarvestApplicationInsights.cs`
+- `tests/HarvestExtractionTests.cs`
+- `tests/HarvestedFixtureReplay.cs`
+- `tests/fixtures/az-single-row.json`
+- `tests/fixtures/az-multi-row.json`
+- `tests/fixtures/az-zero-rows.json`
+- `tests/fixtures/az-missing-field.json`
+- `tests/fixtures/az-empty-field.json`
+- `tests/fixtures/az-malformed.json`
+- `docs/application-insights-harvesting.md`
 - `scripts/verify.ps1`
 - `.noet/OPERATING.md`
 - `.noet/PROJECT.md`

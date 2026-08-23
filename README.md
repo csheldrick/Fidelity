@@ -95,6 +95,32 @@ The repository includes three self-contained, vendor-agnostic file-based apps us
 
 The expected-failure example exits with code 1 by itself. The repository check treats that exit as success only when the output proves that transport and typed-result production succeeded before the required semantic expectations failed.
 
+## Optional: harvesting fixtures from Application Insights
+
+Fidelity core works entirely from local fixtures with zero Azure dependency.
+`tools/HarvestApplicationInsights.cs` is an optional adapter that harvests
+one raw HTTP response body from Application Insights or Log Analytics,
+via the locally authenticated Azure CLI (`az login`), and writes it as an
+ordinary local fixture:
+
+```powershell
+dotnet run --file tools/HarvestApplicationInsights.cs -- `
+  --target my-app-insights-resource `
+  --query "<your KQL>" `
+  --response-field responseBody `
+  --output fixtures/harvested-example.json
+```
+
+The caller owns the KQL query and the response-body column; Fidelity does
+not infer telemetry schema. Ambiguous or missing results fail loudly rather
+than guessing. **Harvested fixtures may contain production data — review
+and sanitize before committing or sharing them.**
+
+See [`docs/application-insights-harvesting.md`](docs/application-insights-harvesting.md)
+for the full command shape, failure semantics, and provenance sidecar
+format. This adapter is an optional fixture source; it is not part of
+Fidelity's replay engine.
+
 ## Running the slice
 
 Run these commands from the repository root with the .NET 10 SDK:
@@ -103,6 +129,8 @@ Run these commands from the repository root with the .NET 10 SDK:
 dotnet run --file examples/HealthyReplay.cs
 dotnet run --file examples/LossyModelReplay.cs       # expected exit code: 1
 dotnet run --file examples/CorrectedModelReplay.cs
+dotnet run --file tests/HarvestExtractionTests.cs
+dotnet run --file tests/HarvestedFixtureReplay.cs
 pwsh -NoProfile -File scripts/verify.ps1
 noet verify run
 ```
@@ -131,10 +159,10 @@ Fidelity is not intended to:
 - require live access to the external API;
 - couple the replay engine to a telemetry provider or fixture-harvesting system.
 
-Telemetry-assisted fixture acquisition may be useful later, but it should remain an optional input layer: capture a response, sanitize it, save it as a fixture, and replay it through Fidelity.
+Telemetry-assisted fixture acquisition remains an optional input layer, not part of replay semantics: capture a response, sanitize it, save it as a fixture, and replay it through Fidelity. See [Optional: harvesting fixtures from Application Insights](#optional-harvesting-fixtures-from-application-insights).
 
 ## Current status
 
-Fidelity is at project initialization. The motivating proof of concept demonstrated that a raw response captured from a difficult-to-reproduce condition can be returned by a replay `HttpMessageHandler` and passed through the actual typed client stack, exposing silent semantic loss that was otherwise difficult to recreate locally.
+The first generic replay slice is built: the shared file-app harness in [`src/Fidelity/Replay.cs`](src/Fidelity/Replay.cs) and the healthy/lossy/corrected demos above demonstrate that a raw response captured from a difficult-to-reproduce condition can be returned by a replay `HttpMessageHandler` and passed through the actual typed client stack, exposing silent semantic loss that was otherwise difficult to recreate locally.
 
-The immediate goal is to build the smallest reusable file-app harness and the first generic pass/fail demos. Architecture beyond that is intentionally not fixed yet.
+Fixture acquisition from Application Insights/Log Analytics (above) is the first optional adapter earned on top of that replay slice. Architecture beyond the current replay mechanics and this harvester is intentionally not fixed yet.
