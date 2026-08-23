@@ -1,0 +1,12 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        { "name": "timestamp", "type": "datetime" },
+        { "name": "responseBody", "type": "string" }
+      ],
+      "rows": []
+    }
+  ]
+}

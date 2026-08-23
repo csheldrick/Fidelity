@@ -1,0 +1,15 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        { "name": "timestamp", "type": "datetime" },
+        { "name": "operation_Id", "type": "string" },
+        { "name": "responseBody", "type": "string" }
+      ],
+      "rows": [
+        [ "2026-08-20T12:00:00Z", "op-single", "{\"result\":{\"status\":\"ok\",\"message\":\"replay-is-real\",\"count\":3}}" ]
+      ]
+    }
+  ]
+}

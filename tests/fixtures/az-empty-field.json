@@ -1,0 +1,14 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        { "name": "timestamp", "type": "datetime" },
+        { "name": "responseBody", "type": "string" }
+      ],
+      "rows": [
+        [ "2026-08-20T12:00:00Z", "" ]
+      ]
+    }
+  ]
+}

@@ -70,4 +70,14 @@ foreach ($demoPath in @(
     }
 }
 
+$harvestExtraction = Invoke-ReplayCase "tests/HarvestExtractionTests.cs" 0
+if ($harvestExtraction -notmatch "\[PASS\] all harvest extraction cases passed") {
+    throw "Harvest extraction tests did not report overall success."
+}
+
+$harvestedReplay = Invoke-ReplayCase "tests/HarvestedFixtureReplay.cs" 0
+if ($harvestedReplay -notmatch "\[PASS\] harvested fixture replay") {
+    throw "Harvested fixture replay did not report passing semantic expectations."
+}
+
 Write-Host "Repository verification passed."
