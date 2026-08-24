@@ -83,7 +83,8 @@ failures += await CheckAsync("orchestration writes the extracted body byte-for-b
                 Query: "traces | take 1",
                 ResponseField: "responseBody",
                 OutputPath: outputPath,
-                WriteProvenance: false),
+                WriteProvenance: false,
+                Offset: "4d"),
             FakeRunner("az-single-row.json"));
 
         return exitCode == 0 &&
@@ -145,7 +146,8 @@ failures += await CheckAsync("orchestration fails loudly when az CLI exits non-z
                 Target: "test-app",
                 Query: "traces | take 1",
                 ResponseField: "responseBody",
-                OutputPath: outputPath),
+                OutputPath: outputPath,
+                Offset: "4d"),
             (_, _) => Task.FromResult(new AzCliProcessResult(1, string.Empty, "ClientAuthenticationError: please run az login")));
 
         return exitCode != 0 && !File.Exists(outputPath);
@@ -174,7 +176,8 @@ failures += await CheckAsync("orchestration fails loudly when the output path ca
                 Target: "test-app",
                 Query: "traces | take 1",
                 ResponseField: "responseBody",
-                OutputPath: unwritablePath),
+                OutputPath: unwritablePath,
+                Offset: "4d"),
             FakeRunner("az-single-row.json"));
 
         return exitCode != 0;
@@ -198,7 +201,8 @@ failures += await CheckAsync("orchestration invokes az with the expected applica
                 Query: "traces | take 1",
                 ResponseField: "responseBody",
                 OutputPath: outputPath,
-                WriteProvenance: false),
+                WriteProvenance: false,
+                Offset: "4d"),
             CapturingRunner("az-single-row.json", arguments => capturedArguments = arguments));
 
         return exitCode == 0 && capturedArguments is
@@ -206,12 +210,158 @@ failures += await CheckAsync("orchestration invokes az with the expected applica
             "monitor", "app-insights", "query",
             "--app", "my-app-insights-resource",
             "--analytics-query", "traces | take 1",
+            "--offset", "4d",
             "-o", "json"
         ];
     }
     finally
     {
         if (File.Exists(outputPath)) File.Delete(outputPath);
+    }
+});
+
+failures += await CheckAsync("application-insights harvest without --offset fails before the injected az runner is ever called", async () =>
+{
+    var runnerCalled = false;
+    var outputPath = Path.Combine(Path.GetTempPath(), $"fidelity-harvest-test-{Guid.NewGuid():N}.json");
+    try
+    {
+        var exitCode = await HarvestRunner.RunAsync(
+            new HarvestOptions(
+                AzureTelemetryMode.ApplicationInsights,
+                Target: "my-app-insights-resource",
+                Query: "traces | take 1",
+                ResponseField: "responseBody",
+                OutputPath: outputPath,
+                WriteProvenance: false,
+                Offset: null),
+            CapturingRunner("az-single-row.json", _ => runnerCalled = true));
+
+        return exitCode != 0 && !runnerCalled && !File.Exists(outputPath);
+    }
+    finally
+    {
+        if (File.Exists(outputPath)) File.Delete(outputPath);
+    }
+});
+
+failures += await CheckAsync("application-insights harvest with a blank --offset also fails before the injected az runner is called", async () =>
+{
+    var runnerCalled = false;
+    var outputPath = Path.Combine(Path.GetTempPath(), $"fidelity-harvest-test-{Guid.NewGuid():N}.json");
+    try
+    {
+        var exitCode = await HarvestRunner.RunAsync(
+            new HarvestOptions(
+                AzureTelemetryMode.ApplicationInsights,
+                Target: "my-app-insights-resource",
+                Query: "traces | take 1",
+                ResponseField: "responseBody",
+                OutputPath: outputPath,
+                WriteProvenance: false,
+                Offset: "   "),
+            CapturingRunner("az-single-row.json", _ => runnerCalled = true));
+
+        return exitCode != 0 && !runnerCalled && !File.Exists(outputPath);
+    }
+    finally
+    {
+        if (File.Exists(outputPath)) File.Delete(outputPath);
+    }
+});
+
+failures += await CheckAsync("--offset is not required, and not sent, for log-analytics mode", async () =>
+{
+    string[]? capturedArguments = null;
+    var outputPath = Path.Combine(Path.GetTempPath(), $"fidelity-harvest-test-{Guid.NewGuid():N}.json");
+    try
+    {
+        var exitCode = await HarvestRunner.RunAsync(
+            new HarvestOptions(
+                AzureTelemetryMode.LogAnalytics,
+                Target: "my-log-analytics-workspace",
+                Query: "traces | take 1",
+                ResponseField: "responseBody",
+                OutputPath: outputPath,
+                WriteProvenance: false,
+                Offset: null),
+            CapturingRunner("az-single-row.json", arguments => capturedArguments = arguments));
+
+        return exitCode == 0 && capturedArguments is
+        [
+            "monitor", "log-analytics", "query",
+            "--workspace", "my-log-analytics-workspace",
+            "--analytics-query", "traces | take 1",
+            "-o", "json"
+        ];
+    }
+    finally
+    {
+        if (File.Exists(outputPath)) File.Delete(outputPath);
+    }
+});
+
+failures += await CheckAsync("provenance sidecar records the explicit application-insights offset", async () =>
+{
+    var outputPath = Path.Combine(Path.GetTempPath(), $"fidelity-harvest-test-{Guid.NewGuid():N}.json");
+    var provenancePath = outputPath + ".provenance.json";
+    try
+    {
+        var exitCode = await HarvestRunner.RunAsync(
+            new HarvestOptions(
+                AzureTelemetryMode.ApplicationInsights,
+                Target: "my-app-insights-resource",
+                Query: "traces | take 1",
+                ResponseField: "responseBody",
+                OutputPath: outputPath,
+                WriteProvenance: true,
+                Offset: "4d"),
+            FakeRunner("az-single-row.json"));
+
+        if (exitCode != 0 || !File.Exists(provenancePath))
+        {
+            return false;
+        }
+
+        var provenance = JsonDocument.Parse(File.ReadAllText(provenancePath)).RootElement;
+        return provenance.GetProperty("offset").GetString() == "4d";
+    }
+    finally
+    {
+        if (File.Exists(outputPath)) File.Delete(outputPath);
+        if (File.Exists(provenancePath)) File.Delete(provenancePath);
+    }
+});
+
+failures += await CheckAsync("provenance sidecar omits offset for log-analytics", async () =>
+{
+    var outputPath = Path.Combine(Path.GetTempPath(), $"fidelity-harvest-test-{Guid.NewGuid():N}.json");
+    var provenancePath = outputPath + ".provenance.json";
+    try
+    {
+        var exitCode = await HarvestRunner.RunAsync(
+            new HarvestOptions(
+                AzureTelemetryMode.LogAnalytics,
+                Target: "my-log-analytics-workspace",
+                Query: "traces | take 1",
+                ResponseField: "responseBody",
+                OutputPath: outputPath,
+                WriteProvenance: true,
+                Offset: null),
+            FakeRunner("az-single-row.json"));
+
+        if (exitCode != 0 || !File.Exists(provenancePath))
+        {
+            return false;
+        }
+
+        var provenance = JsonDocument.Parse(File.ReadAllText(provenancePath)).RootElement;
+        return !provenance.TryGetProperty("offset", out _);
+    }
+    finally
+    {
+        if (File.Exists(outputPath)) File.Delete(outputPath);
+        if (File.Exists(provenancePath)) File.Delete(provenancePath);
     }
 });
 

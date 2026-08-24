@@ -16,6 +16,9 @@
 //     --query "<KQL>" | --query-file <path> \
 //     --response-field <column-name> \
 //     --output <fixture-path> \
+//     --offset <value> (required for --mode application-insights; passed through
+//                        unchanged to `az monitor app-insights query --offset`,
+//                        which otherwise silently defaults to a 1-hour window) \
 //     [--row-index <n>] \
 //     [--no-provenance] [--provenance <path>] [--include-query-text]
 
@@ -43,6 +46,7 @@ static HarvestOptions ParseArguments(string[] args)
     var writeProvenance = true;
     string? provenancePath = null;
     var includeQueryText = false;
+    string? offset = null;
 
     for (var i = 0; i < args.Length; i++)
     {
@@ -83,6 +87,9 @@ static HarvestOptions ParseArguments(string[] args)
             case "--include-query-text":
                 includeQueryText = true;
                 break;
+            case "--offset":
+                offset = RequireValue(args, ref i);
+                break;
             default:
                 return Invalid<HarvestOptions>($"Unknown argument '{args[i]}'.");
         }
@@ -102,6 +109,10 @@ static HarvestOptions ParseArguments(string[] args)
     if (query is null) missing.Add("--query or --query-file");
     if (responseField is null) missing.Add("--response-field");
     if (output is null) missing.Add("--output");
+    if (mode == AzureTelemetryMode.ApplicationInsights && offset is null)
+    {
+        missing.Add("--offset (required for --mode application-insights; az monitor app-insights query otherwise silently defaults to a 1-hour query window)");
+    }
 
     if (missing.Count > 0)
     {
@@ -117,7 +128,8 @@ static HarvestOptions ParseArguments(string[] args)
         rowIndex,
         writeProvenance,
         provenancePath,
-        includeQueryText);
+        includeQueryText,
+        offset);
 }
 
 static string RequireValue(string[] args, ref int i)

@@ -39,6 +39,10 @@ shells out to the locally authenticated `az` CLI and nothing else.
 - `--response-field` — the result column that holds the raw HTTP response
   body text.
 - `--output` — the fixture path to write.
+- `--offset <value>` — **required for `--mode application-insights`**, passed
+  through unchanged as `az monitor app-insights query --offset <value>` (see
+  "Two separate time boundaries" below). Harvesting fails before invoking
+  `az` at all if this is omitted in Application Insights mode.
 
 Optional:
 
@@ -46,6 +50,37 @@ Optional:
 - `--no-provenance` / `--provenance <path>` — control the sidecar (see below).
 - `--include-query-text` — store the literal query text in the provenance
   sidecar instead of a SHA-256 fingerprint.
+
+## Two separate time boundaries (Application Insights)
+
+Application Insights harvesting has two independent, non-overlapping
+concepts of "time range," and Fidelity leaves both entirely in your control:
+
+- **Outer Azure CLI query window (`--offset`)** — `az monitor app-insights
+  query` limits which telemetry it asks the service for. If `--offset` is
+  not given, Azure CLI silently defaults to a 1-hour window. Fidelity's
+  `--offset` maps directly to the CLI's own `--offset` and is required in
+  `--mode application-insights` specifically so this window is never a
+  silent default.
+- **Inner KQL `timestamp` predicate (inside your `--query`)** — a clause
+  such as `| where timestamp > ago(4d)` only *filters within* whatever
+  window the outer CLI request already retrieved. It cannot widen that
+  window.
+
+These two must agree, or the query can return an empty result even though
+the Application Insights UI (which does not share the CLI's default) shows
+the row you expect: a KQL predicate like `ago(4d)` inside a query issued
+with the CLI's default 1-hour `--offset` will filter against data that was
+never fetched in the first place, yielding a well-formed `rows: []` result
+rather than an error. Fidelity does not parse or infer a time range from
+your KQL and does not validate that `--offset` and any inner `timestamp`
+predicate agree — that judgment call is yours; picking `--offset` at least
+as wide as any inner predicate is the caller's responsibility.
+
+`--offset` is Application Insights–specific and is not sent for
+`--mode log-analytics`, which uses the CLI's own `--timespan` option
+(not currently exposed by Fidelity) and defaults to querying all available
+data when no timespan is given.
 
 ## Example
 
@@ -59,10 +94,18 @@ or the workspace GUID so the query is unambiguous regardless of shell defaults:
 ```powershell
 dotnet run --file tools/HarvestApplicationInsights.cs -- `
   --target /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/microsoft.insights/components/my-app-insights-resource `
-  --query "requests | where name == 'GET /operation' | where success == false | take 1 | project responseBody = customDimensions.responseBody" `
+  --query "requests | where timestamp > ago(4d) | where name == 'GET /operation' | where success == false | take 1 | project responseBody = customDimensions.responseBody" `
   --response-field responseBody `
+  --offset 4d `
   --output fixtures/harvested-example.json
 ```
+
+Note `--offset 4d` (the outer Azure CLI request window) matches the inner
+`timestamp > ago(4d)` KQL predicate above — if `--offset` had been narrower
+than the KQL predicate, e.g. left at Azure CLI's 1-hour default, this query
+would return the normal `tables`/`columns` schema with `rows: []` instead of
+the expected row, because the CLI never fetched data outside its own
+window for the inner predicate to filter.
 
 Then replay it exactly like any other fixture:
 
@@ -74,6 +117,8 @@ var replay = new ReplayHttpMessageHandler(ReplayFixture.Read("fixtures/harvested
 
 The harvest fails loudly — with no fixture written — when:
 
+- `--mode application-insights` is used without `--offset` (fails before
+  `az` is invoked at all);
 - the query returns zero rows;
 - the configured `--response-field` is missing from the result columns;
 - the configured field is empty or null in the selected row;
@@ -95,9 +140,11 @@ deserialize and reserialize the body itself.
 By default a sidecar `<output>.provenance.json` is written next to the
 fixture, containing `harvestedAtUtc`, `sourceKind`, `target`,
 `selectedRowIndex`, `totalRows`, and either `queryFingerprint` (default) or
-`queryText` (with `--include-query-text`). This file is a separate artifact:
-it is never read by `ReplayFixture` and never participates in replay or
-semantic assertions.
+`queryText` (with `--include-query-text`). For `--mode application-insights`
+it also records `offset`, so a fixture's acquisition boundary can be
+reconstructed later; this is metadata only and is not present for
+`--mode log-analytics`. This file is a separate artifact: it is never read
+by `ReplayFixture` and never participates in replay or semantic assertions.
 
 ## Security
 

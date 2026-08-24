@@ -19,7 +19,8 @@ public sealed record HarvestOptions(
     int? RowIndex = null,
     bool WriteProvenance = true,
     string? ProvenancePath = null,
-    bool IncludeQueryText = false);
+    bool IncludeQueryText = false,
+    string? Offset = null);
 
 public sealed record AzCliProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
@@ -220,6 +221,12 @@ public static class HarvestRunner
         var sourceKind = options.Mode == AzureTelemetryMode.ApplicationInsights ? "application-insights" : "log-analytics";
         Console.WriteLine($"HARVEST: source={sourceKind} target={options.Target}");
 
+        if (options.Mode == AzureTelemetryMode.ApplicationInsights && string.IsNullOrWhiteSpace(options.Offset))
+        {
+            Console.WriteLine("[FAIL] --offset is required for --mode application-insights: Azure CLI silently applies a 1-hour default query window when it is omitted, which can intersect away rows a caller's own KQL predicate (e.g. timestamp > ago(4d)) expects to see. Pass an explicit --offset, e.g. --offset 4d.");
+            return 1;
+        }
+
         var arguments = BuildAzArguments(options);
 
         AzCliProcessResult processResult;
@@ -296,7 +303,7 @@ public static class HarvestRunner
     private static string[] BuildAzArguments(HarvestOptions options) => options.Mode switch
     {
         AzureTelemetryMode.ApplicationInsights =>
-            ["monitor", "app-insights", "query", "--app", options.Target, "--analytics-query", options.Query, "-o", "json"],
+            ["monitor", "app-insights", "query", "--app", options.Target, "--analytics-query", options.Query, "--offset", options.Offset!, "-o", "json"],
         AzureTelemetryMode.LogAnalytics =>
             ["monitor", "log-analytics", "query", "--workspace", options.Target, "--analytics-query", options.Query, "-o", "json"],
         _ => throw new ArgumentOutOfRangeException(nameof(options), options.Mode, "Unknown Azure telemetry mode.")
@@ -312,6 +319,11 @@ public static class HarvestRunner
             ["selectedRowIndex"] = extraction.SelectedRowIndex,
             ["totalRows"] = extraction.TotalRows
         };
+
+        if (options.Mode == AzureTelemetryMode.ApplicationInsights)
+        {
+            provenance["offset"] = options.Offset;
+        }
 
         if (options.IncludeQueryText)
         {
