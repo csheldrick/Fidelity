@@ -27,7 +27,8 @@ try
             Query: "traces | take 1",
             ResponseField: "responseBody",
             OutputPath: outputPath,
-            WriteProvenance: false),
+            WriteProvenance: false,
+            Offset: "4d"),
         (_, _) => Task.FromResult(new AzCliProcessResult(0, envelope, string.Empty)));
 
     if (harvestExitCode != 0)
