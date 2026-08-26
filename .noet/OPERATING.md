@@ -1,4 +1,4 @@
-<!-- noet:operating-contract-version: 6 -->
+<!-- noet:operating-contract-version: 8 -->
 # Noet Operating Contract
 
 This repository uses Noet's repository-native protocol to preserve engineering
@@ -40,23 +40,22 @@ source of truth; Git is authority and rollback.
 
 - `noet record decision` is the preferred optional lifecycle-safe decision
   writer when the CLI is available. It is not a required write gate.
-- `noet verify run` is the active protocol-era ephemeral declared-check
-  runner: it executes `.noet/VERIFICATION.md`'s declared commands and
-  artifact checks and reports the results honestly. It writes no
-  `.noet/verification` evidence, inspects no Git identity, and is not a
-  required write gate; direct execution of the declared commands remains a
-  supported fallback.
+- `noet verify run` is the active ephemeral declared-check runner: it
+  executes `.noet/VERIFICATION.md`'s declared commands and artifact checks
+  and reports the results honestly. It writes no `.noet/verification`
+  evidence, inspects no Git identity, and is not a required write gate;
+  direct execution of the declared commands remains a supported fallback.
 - `noet sync --check` is a read-only freshness check for Noet-owned/versioned
   managed instruction surfaces.
 - `noet sync` explicitly refreshes only surfaces Noet can prove it owns: a
   versioned Noet operating contract and marked managed sections in host agent
   files. An existing unversioned `.noet/OPERATING.md` is treated
   conservatively as repository-owned and is preserved.
-- `apply`, `brief`, `verify`'s other subcommands (`list`/`record`/`check`/
-  `branch` — bound to Git identity and an evidence store `verify run` never
-  populates), JSON-backed continuity/attention writers, and other preserved
-  runtime machinery remain inactive-by-default; `verify run` itself, above,
-  is active.
+- `apply --task` is retained only as an explicit repository-local opt-in for
+  the bounded Strata consumer. The former `brief`, `verify list`/
+  `record`/`check`/`branch`, JSON continuity/attention writers, and
+  proof/provenance stores were removed from current main; use direct Markdown
+  and direct verification commands for those responsibilities.
 - Synchronization never stages, commits, pushes, or writes from a read-only
   command. Include any sync-created managed-file changes in the ordinary branch
   diff and review them like any other change.
