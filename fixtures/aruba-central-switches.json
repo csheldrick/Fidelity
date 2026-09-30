@@ -1,0 +1,25 @@
+{
+  "switches": [
+    {
+      "name": "HQ-Core-Switch-01",
+      "serial": "SG12345678",
+      "macaddr": "00:00:5e:00:53:af",
+      "status": "Up",
+      "ip_address": "192.168.10.15",
+      "model": "Aruba 6300M",
+      "switch_type": "AOS-CX",
+      "firmware_version": "FL.10.10.0010",
+      "group_name": "HQ-Switches-UI",
+      "site": "Main_Campus",
+      "stack_id": "STK-98765",
+      "nae_aggr_status": "Normal",
+      "client_count": 42,
+      "public_ip_address": "203.0.113.50",
+      "labels": [
+        "Core",
+        "Building-A"
+      ]
+    }
+  ],
+  "count": 1
+}

@@ -44,6 +44,23 @@ if ($corrected -notmatch "\[PASS\] required semantic expectations") {
     throw "Corrected replay did not report passing semantic expectations."
 }
 
+$aruba = Invoke-ReplayCase "examples/ArubaCentralSwitchesReplay.cs" 0
+if ($aruba -notmatch "\[PASS\] Refit ApiResponse wrapper returned") {
+    throw "Aruba replay did not return the expected Refit ApiResponse wrapper."
+}
+if ($aruba -notmatch "\[PASS\] expected Aruba SDK required-property error captured in wrapper") {
+    throw "Aruba replay did not capture the expected required-property error in the wrapper."
+}
+foreach ($requiredLine in @(
+    "[PASS] complete Aruba response returned typed content",
+    "[PASS] SDK response mapped to a Durable-safe page DTO",
+    "switches=1, firmware_version=FL.10.10.0010"
+)) {
+    if ($aruba -notmatch [regex]::Escape($requiredLine)) {
+        throw "Aruba replay did not prove the Durable-safe mapping: $requiredLine"
+    }
+}
+
 $fixturePath = Join-Path $repoRoot "fixtures/application-error.json"
 if (-not (Test-Path -LiteralPath $fixturePath)) {
     throw "The shared application-error fixture is missing."

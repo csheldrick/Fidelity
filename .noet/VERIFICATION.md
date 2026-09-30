@@ -15,7 +15,10 @@ Noet's 120-second default. Example: `- \`npm run e2e\` — timeout: 300s`
 - `examples/HealthyReplay.cs`
 - `examples/LossyModelReplay.cs`
 - `examples/CorrectedModelReplay.cs`
+- `examples/ArubaCentralSwitchesReplay.cs`
 - `fixtures/healthy.json`
+- `fixtures/aruba-central-switches.json`
+- `fixtures/aruba-central-switches-complete.json`
 - `fixtures/application-error.json`
 - `src/Fidelity/Harvest.cs`
 - `tools/HarvestApplicationInsights.cs`

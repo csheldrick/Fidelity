@@ -92,6 +92,7 @@ The repository includes three self-contained, vendor-agnostic file-based apps us
 1. **Pass: correctly modeled response** — [`examples/HealthyReplay.cs`](examples/HealthyReplay.cs) replays [`fixtures/healthy.json`](fixtures/healthy.json), invokes a real Refit interface, and verifies meaningful fields.
 2. **Expected Fidelity failure: incomplete model** — [`examples/LossyModelReplay.cs`](examples/LossyModelReplay.cs) replays the valid application-error response, receives HTTP 200 and a typed object, then fails because the model cannot observe the required error semantics.
 3. **Pass: corrected model** — [`examples/CorrectedModelReplay.cs`](examples/CorrectedModelReplay.cs) replays the exact same fixture with a model that represents `status` and `error`.
+4. **Aruba Central Durable boundary** — [`examples/ArubaCentralSwitchesReplay.cs`](examples/ArubaCentralSwitchesReplay.cs) replays both the captured incomplete switch response and a complete response through Aruba Central's production-compatible Refit/Newtonsoft client path, then verifies the SDK result is mapped to a Durable-safe page DTO.
 
 The expected-failure example exits with code 1 by itself. The repository check treats that exit as success only when the output proves that transport and typed-result production succeeded before the required semantic expectations failed.
 
@@ -129,6 +130,7 @@ Run these commands from the repository root with the .NET 10 SDK:
 dotnet run --file examples/HealthyReplay.cs
 dotnet run --file examples/LossyModelReplay.cs       # expected exit code: 1
 dotnet run --file examples/CorrectedModelReplay.cs
+dotnet run --file examples/ArubaCentralSwitchesReplay.cs
 dotnet run --file tests/HarvestExtractionTests.cs
 dotnet run --file tests/HarvestedFixtureReplay.cs
 pwsh -NoProfile -File scripts/verify.ps1
